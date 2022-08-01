@@ -32,6 +32,9 @@ use Utopia\Database\Validator\Authorization;
 use Utopia\Database\Validator\UID;
 use Utopia\Locale\Locale;
 use Appwrite\Extend\Exception;
+use Appwrite\Messaging\Adapter\Realtime;
+use Appwrite\Utopia\Response\Model\User;
+use Utopia\Registry\Registry;
 use Utopia\Validator\ArrayList;
 use Utopia\Validator\Assoc;
 use Utopia\Validator\Range;
@@ -133,6 +136,7 @@ App::post('/v1/account')
     });
 
 App::post('/v1/account/sessions/email')
+    ->alias('/v1/account/sessions')
     ->desc('Create Account Session with Email')
     ->groups(['api', 'account', 'auth'])
     ->label('event', 'users.[userId].sessions.[sessionId].create')
@@ -370,7 +374,8 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
     ->inject('audits')
     ->inject('events')
     ->inject('usage')
-    ->action(function (string $provider, string $code, string $state, Request $request, Response $response, Document $project, Document $user, Database $dbForProject, Reader $geodb, Audit $audits, Event $events, Stats $usage) use ($oauthDefaultSuccess) {
+    ->inject('register')
+    ->action(function (string $provider, string $code, string $state, Request $request, Response $response, Document $project, Document $user, Database $dbForProject, Reader $geodb, Audit $audits, Event $events, Stats $usage, Registry $register) use ($oauthDefaultSuccess) {
 
         $protocol = $request->getProtocol();
         $callback = $protocol . '://' . $request->getHostname() . '/v1/account/sessions/oauth2/callback/' . $provider . '/' . $project->getId();
@@ -493,6 +498,53 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
                         'memberships' => null,
                         'search' => implode(' ', [$userId, $email, $name])
                     ])));
+
+                    /** Trigger Webhook */
+                    $userModel = new User();
+
+                    $userCreate = new Event(Event::WEBHOOK_QUEUE_NAME, Event::WEBHOOK_CLASS_NAME);
+                    $userCreate
+                        ->setProject($project)
+                        ->setUser($user)
+                        ->setEvent('users.[userId].create')
+                        ->setParam('userId', $userId)
+                        ->setPayload($user->getArrayCopy(array_keys(($userModel->getRules()))))
+                        ->trigger();
+
+                    /** Trigger Functions */
+                    $userCreate
+                        ->setClass(Event::FUNCTIONS_CLASS_NAME)
+                        ->setQueue(Event::FUNCTIONS_QUEUE_NAME)
+                        ->trigger();
+
+                    /** Trigger realtime event */
+                    $allEvents = Event::generateEvents('users.[userId].create', [
+                        'userId' => $userId
+                    ]);
+
+                    $target = Realtime::fromPayload(
+                        event: $allEvents[0],
+                        payload: $user
+                    );
+
+                    Realtime::send(
+                        projectId: $project->getId(),
+                        payload: $user->getArrayCopy(),
+                        events: $allEvents,
+                        channels: $target['channels'],
+                        roles: $target['roles']
+                    );
+
+                    /** Update usage stats */
+                    if (App::getEnv('_APP_USAGE_STATS', 'enabled') === 'enabled') {
+                        $statsd = $register->get('statsd');
+                        $usage = new Stats($statsd);
+                        $usage
+                            ->setParam('projectId', $project->getId())
+                            ->setParam('userId', $user->getId())
+                            ->setParam('users.create', 1)
+                            ->submit();
+                    }
                 } catch (Duplicate $th) {
                     throw new Exception('Account already exists', 409, Exception::USER_ALREADY_EXISTS);
                 }
@@ -782,8 +834,8 @@ App::put('/v1/account/sessions/magic-url')
         Authorization::setRole('user:' . $user->getId());
 
         $session = $dbForProject->createDocument('sessions', $session
-                ->setAttribute('$read', ['user:' . $user->getId()])
-                ->setAttribute('$write', ['user:' . $user->getId()]));
+            ->setAttribute('$read', ['user:' . $user->getId()])
+            ->setAttribute('$write', ['user:' . $user->getId()]));
 
         $dbForProject->deleteCachedDocument('users', $user->getId());
 
@@ -1012,8 +1064,8 @@ App::put('/v1/account/sessions/phone')
         Authorization::setRole('user:' . $user->getId());
 
         $session = $dbForProject->createDocument('sessions', $session
-                ->setAttribute('$read', ['user:' . $user->getId()])
-                ->setAttribute('$write', ['user:' . $user->getId()]));
+            ->setAttribute('$read', ['user:' . $user->getId()])
+            ->setAttribute('$write', ['user:' . $user->getId()]));
 
         $dbForProject->deleteCachedDocument('users', $user->getId());
 
@@ -1154,8 +1206,8 @@ App::post('/v1/account/sessions/anonymous')
         Authorization::setRole('user:' . $user->getId());
 
         $session = $dbForProject->createDocument('sessions', $session
-                ->setAttribute('$read', ['user:' . $user->getId()])
-                ->setAttribute('$write', ['user:' . $user->getId()]));
+            ->setAttribute('$read', ['user:' . $user->getId()])
+            ->setAttribute('$write', ['user:' . $user->getId()]));
 
         $dbForProject->deleteCachedDocument('users', $user->getId());
 
@@ -1886,7 +1938,7 @@ App::delete('/v1/account/sessions')
             if ($session->getAttribute('secret') == Auth::hash(Auth::$secret)) {
                 $session->setAttribute('current', true);
 
-                 // If current session delete the cookies too
+                // If current session delete the cookies too
                 $response
                     ->addCookie(Auth::$cookieName . '_legacy', '', \time() - 3600, '/', Config::getParam('cookieDomain'), ('https' == $protocol), true, null)
                     ->addCookie(Auth::$cookieName, '', \time() - 3600, '/', Config::getParam('cookieDomain'), ('https' == $protocol), true, Config::getParam('cookieSamesite'));
@@ -2061,9 +2113,9 @@ App::put('/v1/account/recovery')
         Authorization::setRole('user:' . $profile->getId());
 
         $profile = $dbForProject->updateDocument('users', $profile->getId(), $profile
-                ->setAttribute('password', Auth::passwordHash($password))
-                ->setAttribute('passwordUpdate', \time())
-                ->setAttribute('emailVerification', true));
+            ->setAttribute('password', Auth::passwordHash($password))
+            ->setAttribute('passwordUpdate', \time())
+            ->setAttribute('emailVerification', true));
 
         $recoveryDocument = $dbForProject->getDocument('tokens', $recovery);
 

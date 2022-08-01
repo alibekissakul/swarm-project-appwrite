@@ -7,6 +7,11 @@ use Appwrite\Auth\OAuth2;
 class DecathlonFedid extends OAuth2
 {
     /**
+     * @var string
+     */
+    private string $endpoint = 'https://preprod.idpdecathlon.oxylane.com';
+
+    /**
      * @var array
      */
     protected array $user = [];
@@ -21,7 +26,7 @@ class DecathlonFedid extends OAuth2
      */
     protected array $scopes = [
         'openid',
-        'profile'
+        'profile',
     ];
 
     /**
@@ -29,7 +34,7 @@ class DecathlonFedid extends OAuth2
      */
     public function getName(): string
     {
-        return 'decathlon-fedid';
+        return 'decathlonFedid';
     }
 
     /**
@@ -37,13 +42,13 @@ class DecathlonFedid extends OAuth2
      */
     public function getLoginURL(): string
     {
-        return 'https://idpdecathlon.oxylane.com/as/authorization.oauth2?' . \http_build_query([
-            'client_id' => $this->appID,
-            'redirect_uri' => $this->callback,
-            'response_type' => 'code',
-            'scope' => \implode(' ', $this->getScopes()),
-            'state' => \json_encode($this->state)
-        ]);
+        return $this->endpoint . '/as/authorization.oauth2?' . \http_build_query([
+                'client_id' => $this->appID,
+                'redirect_uri' => $this->callback,
+                'response_type' => 'code',
+                'scope' => \implode(' ', $this->getScopes()),
+                'state' => \json_encode($this->state),
+            ]);
     }
 
     /**
@@ -54,21 +59,24 @@ class DecathlonFedid extends OAuth2
     protected function getTokens(string $code): array
     {
         if (empty($this->tokens)) {
-            $response = $this->request(
-                'POST',
-                'https://idpdecathlon.oxylane.com/as/token.oauth2',
-                [],
-                \http_build_query([
-                    'client_id' => $this->appID,
-                    'redirect_uri' => $this->callback,
-                    'client_secret' => $this->appSecret,
-                    'code' => $code
-                ])
-            );
+            $headers = [
+                'Authorization: Basic ' . \base64_encode($this->appID . ':' . $this->appSecret),
+                'Content-Type: application/x-www-form-urlencoded',
+                'Cache-Control: no-cache',
+            ];
 
-            $output = [];
-            \parse_str($response, $output);
-            $this->tokens = $output;
+            $this->tokens = \json_decode($this->request(
+                'POST',
+                $this->endpoint . '/as/token.oauth2',
+                $headers,
+                \http_build_query([
+                    'grant_type' => 'authorization_code',
+                    'client_id' => $this->appID,
+                    'code' => $code,
+                    'redirect_uri' => $this->callback,
+                    'scope' => \implode(' ', $this->getScopes()),
+                ])
+            ), true);
         }
 
         return $this->tokens;
@@ -81,21 +89,22 @@ class DecathlonFedid extends OAuth2
      */
     public function refreshTokens(string $refreshToken): array
     {
-        $response = $this->request(
+        $headers = [
+            'Cache-Control: no-cache',
+            'Content-Type: application/x-www-form-urlencoded',
+        ];
+
+        $this->tokens = \json_decode($this->request(
             'POST',
-            'https://idpdecathlon.oxylane.com/as/token.oauth2',
-            [],
+            $this->endpoint . '/as/token.oauth2',
+            $headers,
             \http_build_query([
                 'client_id' => $this->appID,
                 'client_secret' => $this->appSecret,
                 'grant_type' => 'refresh_token',
-                'refresh_token' => $refreshToken
+                'refresh_token' => $refreshToken,
             ])
-        );
-
-        $output = [];
-        \parse_str($response, $output);
-        $this->tokens = $output;
+        ), true);
 
         if (empty($this->tokens['refresh_token'])) {
             $this->tokens['refresh_token'] = $refreshToken;
@@ -112,6 +121,8 @@ class DecathlonFedid extends OAuth2
     public function getUserID(string $accessToken): string
     {
         $user = $this->getUser($accessToken);
+
+        var_dump($user);
 
         return $user['uid'] ?? '';
     }
@@ -157,10 +168,19 @@ class DecathlonFedid extends OAuth2
      *
      * @return array
      */
-    protected function getUser(string $accessToken)
+    protected function getUser(string $accessToken): array
     {
         if (empty($this->user)) {
-            $this->user = \json_decode($this->request('GET', 'https://idpdecathlon.oxylane.com/idp/userinfo.openid', ['Authorization: Bearer ' . \urlencode($accessToken)]), true);
+            $headers = ['Authorization: Bearer ' . \urlencode($accessToken)];
+
+            $this->user = \json_decode($this->request(
+                'POST',
+                $this->endpoint . '/idp/userinfo.openid',
+                $headers,
+                \http_build_query([
+                    'scope' => \implode(' ', $this->getScopes()),
+                ])
+            ), true);
         }
 
         return $this->user;

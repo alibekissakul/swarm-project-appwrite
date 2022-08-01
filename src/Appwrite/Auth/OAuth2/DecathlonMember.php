@@ -7,6 +7,11 @@ use Appwrite\Auth\OAuth2;
 class DecathlonMember extends OAuth2
 {
     /**
+     * @var string
+     */
+    private string $endpoint = 'https://api-global.preprod.decathlon.net';
+
+    /**
      * @var array
      */
     protected array $user = [];
@@ -35,7 +40,7 @@ class DecathlonMember extends OAuth2
         'country',
         'timezone',
         'identifiers',
-        'profile'
+        'profile',
     ];
 
     /**
@@ -43,7 +48,7 @@ class DecathlonMember extends OAuth2
      */
     public function getName(): string
     {
-        return 'decathlon-member';
+        return 'decathlonMember';
     }
 
     /**
@@ -51,13 +56,13 @@ class DecathlonMember extends OAuth2
      */
     public function getLoginURL(): string
     {
-        return 'https://api-global.preprod.decathlon.net/connect/oauth/authorize?' . \http_build_query([
-            'client_id' => $this->appID,
-            'redirect_uri' => $this->callback,
-            'response_type' => 'code',
-            'state' => \json_encode($this->state),
-            'scope' => \implode(' ', $this->getScopes()),
-        ]);
+        return $this->endpoint . '/connect/oauth/authorize?' . \http_build_query([
+                'client_id' => $this->appID,
+                'redirect_uri' => $this->callback,
+                'response_type' => 'code',
+                'state' => \json_encode($this->state),
+                'scope' => \implode(' ', $this->getScopes()),
+            ]);
     }
 
     /**
@@ -68,22 +73,18 @@ class DecathlonMember extends OAuth2
     protected function getTokens(string $code): array
     {
         if (empty($this->tokens)) {
-            $response = $this->request(
+            $this->tokens = \json_decode($this->request(
                 'POST',
-                'https://api-global.preprod.decathlon.net/connect/oauth/token',
+                $this->endpoint . '/connect/oauth/token',
                 [],
                 \http_build_query([
                     'client_id' => $this->appID,
                     'redirect_uri' => $this->callback,
                     'client_secret' => $this->appSecret,
                     'code' => $code,
-                    'grant_type' => 'authorization_code'
+                    'grant_type' => 'authorization_code',
                 ])
-            );
-
-            $output = [];
-            \parse_str($response, $output);
-            $this->tokens = $output;
+            ), true);
         }
 
         return $this->tokens;
@@ -96,22 +97,18 @@ class DecathlonMember extends OAuth2
      */
     public function refreshTokens(string $refreshToken): array
     {
-        $response = $this->request(
+        $headers = ['Authorization: Basic ' . base64_encode($this->appID . ':' . $this->appSecret)];
+
+        $this->tokens = \json_decode($this->request(
             'POST',
-            'https://api-global.preprod.decathlon.net/connect/oauth/token',
-            [
-                'Authorization: Basic ' . base64_encode($this->appID . ':' . $this->appSecret)
-            ],
+            $this->endpoint . '/connect/oauth/token',
+            $headers,
             \http_build_query([
                 'scope' => \implode(' ', $this->getScopes()),
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $refreshToken,
             ])
-        );
-
-        $output = [];
-        \parse_str($response, $output);
-        $this->tokens = $output;
+        ), true);
 
         if (empty($this->tokens['refresh_token'])) {
             $this->tokens['refresh_token'] = $refreshToken;
@@ -129,7 +126,15 @@ class DecathlonMember extends OAuth2
     {
         $user = $this->getUser($accessToken);
 
-        return $user['id'] ?? '';
+        $identifiers = $user['identifiers'];
+
+        // Looking for loyalty card number as ID
+        $result = \array_filter(
+            $identifiers,
+            fn($identifier) => $identifier['id'] === 'loyalty_card'
+        );
+
+        return $result ? $result[0]['value'] : $user['sub'];
     }
 
     /**
@@ -141,7 +146,7 @@ class DecathlonMember extends OAuth2
     {
         $user = $this->getUser($accessToken);
 
-        return $user['mail'] ?? '';
+        return $user['claims']['email'] ?? '';
     }
 
     /**
@@ -153,7 +158,9 @@ class DecathlonMember extends OAuth2
      */
     public function isEmailVerified(string $accessToken): bool
     {
-        return true;
+        $user = $this->getUser($accessToken);
+
+        return $user['claims']['email_verified'] ?? false;
     }
 
     /**
@@ -165,7 +172,7 @@ class DecathlonMember extends OAuth2
     {
         $user = $this->getUser($accessToken);
 
-        return $user['displayName'] ?? '';
+        return \trim($user['claims']['given_name'] . ' ' . $user['claims']['family_name']);
     }
 
     /**
@@ -173,16 +180,18 @@ class DecathlonMember extends OAuth2
      *
      * @return array
      */
-    protected function getUser(string $accessToken)
+    protected function getUser(string $accessToken): array
     {
         if (empty($this->user)) {
+            $headers = [
+                'x-api-key: 3821ded8-89f2-420b-832c-4e0ae56eb91c',
+                'Authorization: Bearer ' . \urlencode($accessToken),
+            ];
+
             $this->user = \json_decode($this->request(
                 'GET',
-                'https://api-global.preprod.decathlon.net/identity/v1/members/profile/me',
-                [
-                    'x-api-key' => '3821ded8-89f2-420b-832c-4e0ae56eb91c',
-                    'Authorization: Bearer ' . \urlencode($accessToken)
-                ]
+                $this->endpoint . '/identity/v1/members/profile/me',
+                $headers
             ), true);
         }
 

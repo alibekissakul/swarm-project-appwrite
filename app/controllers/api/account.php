@@ -142,6 +142,7 @@ App::post('/v1/account')
 
 App::post('/v1/account/sessions/email')
     ->alias('/v1/account/sessions')
+    ->alias('/v1/account/sessions')
     ->desc('Create Account Session with Email')
     ->groups(['api', 'account', 'auth'])
     ->label('event', 'users.[userId].sessions.[sessionId].create')
@@ -515,6 +516,53 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
                         'memberships' => null,
                         'search' => implode(' ', [$userId, $email, $name])
                     ])));
+
+                    /** Trigger Webhook */
+                    $userModel = new User();
+
+                    $userCreate = new Event(Event::WEBHOOK_QUEUE_NAME, Event::WEBHOOK_CLASS_NAME);
+                    $userCreate
+                        ->setProject($project)
+                        ->setUser($user)
+                        ->setEvent('users.[userId].create')
+                        ->setParam('userId', $userId)
+                        ->setPayload($user->getArrayCopy(array_keys(($userModel->getRules()))))
+                        ->trigger();
+
+                    /** Trigger Functions */
+                    $userCreate
+                        ->setClass(Event::FUNCTIONS_CLASS_NAME)
+                        ->setQueue(Event::FUNCTIONS_QUEUE_NAME)
+                        ->trigger();
+
+                    /** Trigger realtime event */
+                    $allEvents = Event::generateEvents('users.[userId].create', [
+                        'userId' => $userId
+                    ]);
+
+                    $target = Realtime::fromPayload(
+                        event: $allEvents[0],
+                        payload: $user
+                    );
+
+                    Realtime::send(
+                        projectId: $project->getId(),
+                        payload: $user->getArrayCopy(),
+                        events: $allEvents,
+                        channels: $target['channels'],
+                        roles: $target['roles']
+                    );
+
+                    /** Update usage stats */
+                    if (App::getEnv('_APP_USAGE_STATS', 'enabled') === 'enabled') {
+                        $statsd = $register->get('statsd');
+                        $usage = new Stats($statsd);
+                        $usage
+                            ->setParam('projectId', $project->getId())
+                            ->setParam('userId', $user->getId())
+                            ->setParam('users.create', 1)
+                            ->submit();
+                    }
                 } catch (Duplicate $th) {
                     throw new Exception(Exception::USER_ALREADY_EXISTS);
                 }
@@ -1875,7 +1923,7 @@ App::delete('/v1/account/sessions')
             if ($session->getAttribute('secret') == Auth::hash(Auth::$secret)) {
                 $session->setAttribute('current', true);
 
-                 // If current session delete the cookies too
+                // If current session delete the cookies too
                 $response
                     ->addCookie(Auth::$cookieName . '_legacy', '', \time() - 3600, '/', Config::getParam('cookieDomain'), ('https' == $protocol), true, null)
                     ->addCookie(Auth::$cookieName, '', \time() - 3600, '/', Config::getParam('cookieDomain'), ('https' == $protocol), true, Config::getParam('cookieSamesite'));

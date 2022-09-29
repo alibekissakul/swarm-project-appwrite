@@ -9,7 +9,7 @@ class DecathlonFedid extends OAuth2
     /**
      * @var string
      */
-    private string $endpoint = 'https://preprod.idpdecathlon.oxylane.com';
+    private string $endpoint = 'https://idpdecathlon.oxylane.com';
 
     /**
      * @var array
@@ -43,12 +43,12 @@ class DecathlonFedid extends OAuth2
     public function getLoginURL(): string
     {
         return $this->endpoint . '/as/authorization.oauth2?' . \http_build_query([
-                'client_id' => $this->appID,
-                'redirect_uri' => $this->callback,
-                'response_type' => 'code',
-                'scope' => \implode(' ', $this->getScopes()),
-                'state' => \json_encode($this->state),
-            ]);
+            'client_id' => $this->appID,
+            'redirect_uri' => $this->callback,
+            'response_type' => 'code',
+            'scope' => \implode(' ', $this->getScopes()),
+            'state' => \json_encode($this->state),
+        ]);
     }
 
     /**
@@ -59,8 +59,9 @@ class DecathlonFedid extends OAuth2
     protected function getTokens(string $code): array
     {
         if (empty($this->tokens)) {
+            $basicToken =  \base64_encode($this->appID . ':' . $this->getAppSecret()['clientSecret']);
             $headers = [
-                'Authorization: Basic ' . \base64_encode($this->appID . ':' . $this->appSecret),
+                'Authorization: Basic ' . $basicToken,
                 'Content-Type: application/x-www-form-urlencoded',
                 'Cache-Control: no-cache',
             ];
@@ -100,7 +101,7 @@ class DecathlonFedid extends OAuth2
             $headers,
             \http_build_query([
                 'client_id' => $this->appID,
-                'client_secret' => $this->appSecret,
+                'client_secret' => $this->getAppSecret()['clientSecret'],
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $refreshToken,
             ])
@@ -121,8 +122,6 @@ class DecathlonFedid extends OAuth2
     public function getUserID(string $accessToken): string
     {
         $user = $this->getUser($accessToken);
-
-        var_dump($user);
 
         return $user['uid'] ?? '';
     }
@@ -184,5 +183,32 @@ class DecathlonFedid extends OAuth2
         }
 
         return $this->user;
+    }
+
+    /**
+     * Decode the JSON stored in appSecret
+     *
+     * @return array
+     */
+    protected function getAppSecret(): array
+    {
+        try {
+            $secret = \json_decode($this->appSecret, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $th) {
+            throw new \Exception('Invalid secret');
+        }
+        return $secret;
+    }
+
+    /**
+     * Extracts the x-api-key
+     *
+     * @return string
+     */
+    protected function getXApiKey(): string
+    {
+        $secret = $this->getAppSecret();
+
+        return $secret['x-api-key'] ?? null;
     }
 }

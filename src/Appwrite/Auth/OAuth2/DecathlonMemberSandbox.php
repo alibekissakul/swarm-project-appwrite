@@ -4,12 +4,12 @@ namespace Appwrite\Auth\OAuth2;
 
 use Appwrite\Auth\OAuth2;
 
-class DecathlonMember extends OAuth2
+class DecathlonMemberSandbox extends OAuth2
 {
     /**
      * @var string
      */
-    private string $endpoint = 'https://api-global.decathlon.net';
+    private string $endpoint = 'https://api-global.preprod.decathlon.net';
 
     /**
      * @var array

@@ -34,6 +34,22 @@
           "endpoint": "oauth2GitlabEndpoint",
           "clientSecret": "oauth2GitlabClientSecret",
         },
+        "DecathlonFedid": {
+          "x-api-key": "oauth2DecathlonFedidXApiKey",
+          "clientSecret": "oauth2DecathlonFedidClientSecret",
+        },
+        "DecathlonMember": {
+          "x-api-key": "oauth2DecathlonMemberXApiKey",
+          "clientSecret": "oauth2DecathlonMemberClientSecret",
+        },
+        "DecathlonFedidSandbox": {
+          "x-api-key": "oauth2DecathlonFedidSandboxXApiKey",
+          "clientSecret": "oauth2DecathlonFedidSandboxClientSecret",
+        },
+        "DecathlonMemberSandbox": {
+          "x-api-key": "oauth2DecathlonMemberSandboxXApiKey",
+          "clientSecret": "oauth2DecathlonMemberSandboxClientSecret",
+        },
       }
       let provider = element.getAttribute("data-forms-oauth-custom");
       if (!provider || !providers.hasOwnProperty(provider)) { console.error("Provider for custom form not set or unknown") }

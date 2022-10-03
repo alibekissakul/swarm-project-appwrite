@@ -6,10 +6,6 @@ use Appwrite\Auth\OAuth2;
 
 class DecathlonFedid extends OAuth2
 {
-    /**
-     * @var string
-     */
-    private string $endpoint = 'https://idpdecathlon.oxylane.com';
 
     /**
      * @var array
@@ -42,7 +38,7 @@ class DecathlonFedid extends OAuth2
      */
     public function getLoginURL(): string
     {
-        return $this->endpoint . '/as/authorization.oauth2?' . \http_build_query([
+        return $this->getEndpoint() . '/as/authorization.oauth2?' . \http_build_query([
             'client_id' => $this->appID,
             'redirect_uri' => $this->callback,
             'response_type' => 'code',
@@ -68,7 +64,7 @@ class DecathlonFedid extends OAuth2
 
             $this->tokens = \json_decode($this->request(
                 'POST',
-                $this->endpoint . '/as/token.oauth2',
+                $this->getEndpoint() . '/as/token.oauth2',
                 $headers,
                 \http_build_query([
                     'grant_type' => 'authorization_code',
@@ -97,7 +93,7 @@ class DecathlonFedid extends OAuth2
 
         $this->tokens = \json_decode($this->request(
             'POST',
-            $this->endpoint . '/as/token.oauth2',
+            $this->getEndpoint() . '/as/token.oauth2',
             $headers,
             \http_build_query([
                 'client_id' => $this->appID,
@@ -174,7 +170,7 @@ class DecathlonFedid extends OAuth2
 
             $this->user = \json_decode($this->request(
                 'POST',
-                $this->endpoint . '/idp/userinfo.openid',
+                $this->getEndpoint() . '/idp/userinfo.openid',
                 $headers,
                 \http_build_query([
                     'scope' => \implode(' ', $this->getScopes()),
@@ -210,5 +206,17 @@ class DecathlonFedid extends OAuth2
         $secret = $this->getAppSecret();
 
         return $secret['x-api-key'] ?? null;
+    }
+
+    /**
+     * Extracts the endpoint
+     *
+     * @return string
+     */
+    protected function getEndpoint(): string
+    {
+        $secret = $this->getAppSecret();
+
+        return $secret['endpoint'] ?? null;
     }
 }

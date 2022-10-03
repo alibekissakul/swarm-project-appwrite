@@ -7,11 +7,6 @@ use Appwrite\Auth\OAuth2;
 class DecathlonMember extends OAuth2
 {
     /**
-     * @var string
-     */
-    private string $endpoint = 'https://api-global.decathlon.net';
-
-    /**
      * @var array
      */
     protected array $user = [];
@@ -56,7 +51,7 @@ class DecathlonMember extends OAuth2
      */
     public function getLoginURL(): string
     {
-        return $this->endpoint . '/connect/oauth/authorize?' . \http_build_query([
+        return $this->getEndpoint() . '/connect/oauth/authorize?' . \http_build_query([
             'client_id' => $this->appID,
             'redirect_uri' => $this->callback,
             'response_type' => 'code',
@@ -75,7 +70,7 @@ class DecathlonMember extends OAuth2
         if (empty($this->tokens)) {
             $this->tokens = \json_decode($this->request(
                 'POST',
-                $this->endpoint . '/connect/oauth/token',
+                $this->getEndpoint() . '/connect/oauth/token',
                 [],
                 \http_build_query([
                     'client_id' => $this->appID,
@@ -102,7 +97,7 @@ class DecathlonMember extends OAuth2
 
         $this->tokens = \json_decode($this->request(
             'POST',
-            $this->endpoint . '/connect/oauth/token',
+            $this->getEndpoint() . '/connect/oauth/token',
             $headers,
             \http_build_query([
                 'scope' => \implode(' ', $this->getScopes()),
@@ -191,7 +186,7 @@ class DecathlonMember extends OAuth2
 
             $this->user = \json_decode($this->request(
                 'GET',
-                $this->endpoint . '/identity/v1/members/profile/me',
+                $this->getEndpoint() . '/identity/v1/members/profile/me',
                 $headers
             ), true);
         }
@@ -224,5 +219,17 @@ class DecathlonMember extends OAuth2
         $secret = $this->getAppSecret();
 
         return $secret['x-api-key'] ?? null;
+    }
+
+    /**
+     * Extracts the endpoint
+     * 
+     * @return string
+     */
+    protected function getEndpoint(): string
+    {
+        $secret = $this->getAppSecret();
+
+        return $secret['endpoint'] ?? null;
     }
 }

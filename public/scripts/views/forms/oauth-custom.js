@@ -36,19 +36,13 @@
         },
         "DecathlonFedid": {
           "x-api-key": "oauth2DecathlonFedidXApiKey",
+          "endpoint": "oauth2DecathlonFedidEndpoint",
           "clientSecret": "oauth2DecathlonFedidClientSecret",
         },
         "DecathlonMember": {
           "x-api-key": "oauth2DecathlonMemberXApiKey",
+          "endpoint": "oauth2DecathlonMemberEndpoint",
           "clientSecret": "oauth2DecathlonMemberClientSecret",
-        },
-        "DecathlonFedidSandbox": {
-          "x-api-key": "oauth2DecathlonFedidSandboxXApiKey",
-          "clientSecret": "oauth2DecathlonFedidSandboxClientSecret",
-        },
-        "DecathlonMemberSandbox": {
-          "x-api-key": "oauth2DecathlonMemberSandboxXApiKey",
-          "clientSecret": "oauth2DecathlonMemberSandboxClientSecret",
         },
       }
       let provider = element.getAttribute("data-forms-oauth-custom");

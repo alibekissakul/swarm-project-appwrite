@@ -35,7 +35,7 @@ class DecathlonMember extends OAuth2
         'country',
         'timezone',
         'identifiers',
-        'profile',
+        // 'profile',
     ];
 
     /**

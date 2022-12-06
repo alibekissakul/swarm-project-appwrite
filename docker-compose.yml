@@ -46,7 +46,7 @@ services:
   appwrite:
     container_name: appwrite
     <<: *x-logging
-    image: appwrite-dev
+    # image: appwrite-dev
     build:
       context: .
       args:
@@ -179,7 +179,9 @@ services:
     entrypoint: realtime
     <<: *x-logging
     container_name: appwrite-realtime
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     restart: unless-stopped
     ports: 
       - 9505:80
@@ -226,7 +228,9 @@ services:
     entrypoint: worker-audits
     <<: *x-logging
     container_name: appwrite-worker-audits
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -254,7 +258,9 @@ services:
     entrypoint: worker-webhooks
     <<: *x-logging
     container_name: appwrite-worker-webhooks
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -279,7 +285,9 @@ services:
     entrypoint: worker-deletes
     <<: *x-logging
     container_name: appwrite-worker-deletes
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     depends_on:
@@ -335,7 +343,9 @@ services:
     entrypoint: worker-databases
     <<: *x-logging
     container_name: appwrite-worker-databases
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes: 
@@ -364,7 +374,9 @@ services:
     entrypoint: worker-builds
     <<: *x-logging
     container_name: appwrite-worker-builds
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes: 
@@ -394,7 +406,9 @@ services:
     entrypoint: worker-certificates
     <<: *x-logging
     container_name: appwrite-worker-certificates
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     depends_on:
@@ -427,7 +441,9 @@ services:
     entrypoint: worker-functions
     <<: *x-logging
     container_name: appwrite-worker-functions
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -461,7 +477,9 @@ services:
     <<: *x-logging
     entrypoint: executor
     stop_signal: SIGINT
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       appwrite:
       runtimes:
@@ -521,7 +539,9 @@ services:
     entrypoint: worker-mails
     <<: *x-logging
     container_name: appwrite-worker-mails
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -552,7 +572,9 @@ services:
     entrypoint: worker-messaging
     <<: *x-logging
     container_name: appwrite-worker-messaging
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -575,7 +597,9 @@ services:
     entrypoint: maintenance
     <<: *x-logging
     container_name: appwrite-maintenance
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -609,7 +633,9 @@ services:
     entrypoint: usage
     <<: *x-logging
     container_name: appwrite-usage
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:
@@ -641,7 +667,9 @@ services:
     entrypoint: schedule
     <<: *x-logging
     container_name: appwrite-schedule
-    image: appwrite-dev
+    build:
+      context: .
+    # image: appwrite-dev
     networks:
       - appwrite
     volumes:

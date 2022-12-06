@@ -531,6 +531,26 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
         $secret = Auth::tokenGenerator();
         $expire = DateTime::addSeconds(new \DateTime(), $duration);
 
+        $isAnonymousUser = Auth::isAnonymousUser($user);
+
+        if ($isAnonymousUser) {
+            $anonymousUser = clone $user;
+            $email = $oauth2->getUserEmail($accessToken);
+
+            $existUser = $dbForProject->findOne('users', [
+                Query::equal('email', [$email]),
+            ]);
+
+            if ($existUser) {
+                $user = $existUser;
+            } else {
+                $user
+                    ->setAttribute('name', $oauth2->getUserName($accessToken))
+                    ->setAttribute('email', $oauth2->getUserEmail($accessToken))
+                ;
+            }
+        }
+
         $session = new Document(array_merge([
             '$id' => ID::unique(),
             'userId' => $user->getId(),
@@ -545,15 +565,6 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
             'ip' => $request->getIP(),
             'countryCode' => ($record) ? \strtolower($record['country']['iso_code']) : '--',
         ], $detector->getOS(), $detector->getClient(), $detector->getDevice()));
-
-        $isAnonymousUser = Auth::isAnonymousUser($user);
-
-        if ($isAnonymousUser) {
-            $user
-                ->setAttribute('name', $oauth2->getUserName($accessToken))
-                ->setAttribute('email', $oauth2->getUserEmail($accessToken))
-            ;
-        }
 
         $user
             ->setAttribute('status', true)
@@ -573,6 +584,10 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
 
         $session->setAttribute('expire', $expire);
 
+        if ($anonymousUser) {
+            $session->setAttribute('clientCode', $anonymousUser->getId());
+        }
+        
         $events
             ->setParam('userId', $user->getId())
             ->setParam('sessionId', $session->getId())

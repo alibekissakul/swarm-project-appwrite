@@ -1949,13 +1949,13 @@ App::post('/v1/databases/:databaseId/collections/:collectionId/documents')
             throw new Exception(Exception::DOCUMENT_ALREADY_EXISTS);
         }
 
-        $events
-            ->setParam('databaseId', $databaseId)
-            ->setParam('collectionId', $collection->getId())
-            ->setParam('documentId', $document->getId())
-            ->setContext('collection', $collection)
-            ->setContext('database', $database)
-        ;
+        // $events
+        //     ->setParam('databaseId', $databaseId)
+        //     ->setParam('collectionId', $collection->getId())
+        //     ->setParam('documentId', $document->getId())
+        //     ->setContext('collection', $collection)
+        //     ->setContext('database', $database)
+        // ;
 
         $response
             ->setStatusCode(Response::STATUS_CODE_CREATED)
@@ -2345,13 +2345,13 @@ App::patch('/v1/databases/:databaseId/collections/:collectionId/documents/:docum
             throw new Exception(Exception::DOCUMENT_INVALID_STRUCTURE, $exception->getMessage());
         }
 
-        $events
-            ->setParam('databaseId', $databaseId)
-            ->setParam('collectionId', $collection->getId())
-            ->setParam('documentId', $document->getId())
-            ->setContext('collection', $collection)
-            ->setContext('database', $database)
-        ;
+        // $events
+        //     ->setParam('databaseId', $databaseId)
+        //     ->setParam('collectionId', $collection->getId())
+        //     ->setParam('documentId', $document->getId())
+        //     ->setContext('collection', $collection)
+        //     ->setContext('database', $database)
+        // ;
 
         $response->dynamic($document, Response::MODEL_DOCUMENT);
     });

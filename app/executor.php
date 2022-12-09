@@ -37,7 +37,7 @@ use Utopia\Validator\Text;
 Runtime::enableCoroutine(true, SWOOLE_HOOK_ALL);
 
 /** Constants */
-const MAINTENANCE_INTERVAL = 3600; // 3600 seconds = 1 hour
+const MAINTENANCE_INTERVAL = 18000; // 18000 seconds = 5 hour
 
 /**
 * Create a Swoole table to store runtime information

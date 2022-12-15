@@ -2,3 +2,7 @@
 	path = app/console
 	url = https://github.com/appwrite/console
 	branch = 2.0.2
+[submodule "callback-handler"]
+	path = callback-handler
+	url = git@github.com:alibekissakul/swarm-callback-handler.git
+	tag = 1.0

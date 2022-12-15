@@ -578,9 +578,7 @@ App::get('/v1/account/sessions/oauth2/:provider/redirect')
 
         $session->setAttribute('expire', $expire);
 
-        if ($anonymousUser) {
-            $session->setAttribute('clientCode', $anonymousUser->getId());
-
+        if ($isAnonymousUser) {
             $databaseForOrders = Authorization::skip(fn () => $dbForProject->getDocument('databases', 'orders'));
 
             if ($databaseForOrders->getId()) {
